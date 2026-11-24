@@ -259,14 +259,22 @@ class AVControl:
     async def async_power_on(self, bound_entity: BoundEntity) -> None:
         """Wake a TV with a known MAC; other devices take an OCF power write.
 
-        OCF can't turn a TV on (#834): its endpoint is gone in standby, and
-        one whose switch answers on is on already.
+        If the OCF endpoint is still answering in standby, try the OCF power
+        write first and fall back to Wake-on-LAN if it fails.
         """
         mac = self._wake_mac()
+        if self._answering():
+            if self._coordinator.resource(tv_caps.HREF_SWITCH).get("value"):
+                return
+            try:
+                await self._coordinator.async_send_command(bound_entity, ("power", True))
+            except Exception:
+                if mac is None:
+                    raise
+            else:
+                return
         if mac is None:
             await self._coordinator.async_send_command(bound_entity, ("power", True))
-            return
-        if self._answering() and self._coordinator.resource(tv_caps.HREF_SWITCH).get("value"):
             return
         await self._async_wake_on_lan(mac)
 

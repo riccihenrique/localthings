@@ -662,6 +662,7 @@ def _supported_commands(resources: dict) -> frozenset[str]:
     audio = resources.get(HREF_AUDIO) or {}
     if _writable(power) and isinstance(power.get("value"), bool):
         commands.add("power_off")
+        commands.add("power_on")
     if _writable(audio):
         if _number(audio.get("volume")):
             commands.add("volume")

@@ -95,6 +95,21 @@ async def async_setup_entry(
     )
 
 
+def resolve_key(command: str) -> str:
+    """Resolve a remote key name or alias into a canonical KEY_* command."""
+    norm = command.strip()
+    alias = _ALIASES.get(norm) or _ALIASES.get(norm.lower().replace(" ", "_"))
+    if alias is not None:
+        return alias
+    if _COMMAND_RE.fullmatch(norm):
+        return norm
+    raise ServiceValidationError(
+        translation_domain=DOMAIN,
+        translation_key="unknown_remote_command",
+        translation_placeholders={"command": command},
+    )
+
+
 class LocalThingsRemote(LocalThingsEntity, RemoteEntity):
     """Remote entity issuing KEY_* commands over OCF."""
 
@@ -131,17 +146,7 @@ class LocalThingsRemote(LocalThingsEntity, RemoteEntity):
         await self.coordinator.av.async_turn_off(self._media_bound())
 
     def _resolve_key(self, command: str) -> str:
-        norm = command.strip()
-        alias = _ALIASES.get(norm) or _ALIASES.get(norm.lower().replace(" ", "_"))
-        if alias is not None:
-            return alias
-        if _COMMAND_RE.fullmatch(norm):
-            return norm
-        raise ServiceValidationError(
-            translation_domain=DOMAIN,
-            translation_key="unknown_remote_command",
-            translation_placeholders={"command": command},
-        )
+        return resolve_key(command)
 
     async def async_send_command(self, command: Iterable[str], **kwargs: Any) -> None:
         num_repeats = int(kwargs.get("num_repeats", 1)) if kwargs.get("num_repeats") else 1

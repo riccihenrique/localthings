@@ -658,6 +658,18 @@ class LocalThingsMediaPlayer(LocalThingsEntity, MediaPlayerEntity):
                     translation_placeholders={"camera": camera},
                 ) from err
             media_type, media_id = sourced.mime_type, sourced.url
+        if str(media_type).lower() == "send_key":
+            from .registry.entities import RemoteDesc
+            from .remote import resolve_key
+
+            remote_bound = next(
+                (b for b in self.coordinator.bound if isinstance(b.desc, RemoteDesc)), None
+            )
+            if remote_bound is not None:
+                await self.coordinator.async_send_command(
+                    remote_bound, resolve_key(str(media_id))
+                )
+                return
         if media_type not in (MediaType.CHANNEL, MediaType.APP):
             await self._async_cast(str(media_type), str(media_id), title, icon, ask=ask)
             return
